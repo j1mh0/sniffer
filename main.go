@@ -48,7 +48,7 @@ func doIt(ctx context.Context, device *string, promiscuous *bool) {
 		packetCount++
 		select {
 		case <-ctx.Done():
-			fmt.Printf("\n%v packet captured.\n", packetCount)
+			fmt.Printf("\n%v packets captured.\n", packetCount)
 			os.Exit(0)
 		default:
 		}
