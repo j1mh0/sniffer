@@ -8,13 +8,19 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 )
 
-func doIt(ctx context.Context, device string, promiscuous bool, expression string) {
+var wg sync.WaitGroup
+
+func sniff(ctx context.Context, device string, promiscuous bool, expression string) {
+
+	wg.Add(1)
+	defer wg.Done()
 
 	var (
 		snapshotLen int32 = 1024
@@ -27,7 +33,7 @@ func doIt(ctx context.Context, device string, promiscuous bool, expression strin
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
+		return
 	}
 	defer handle.Close()
 
@@ -35,7 +41,7 @@ func doIt(ctx context.Context, device string, promiscuous bool, expression strin
 	if expression != "" {
 		if err := handle.SetBPFFilter(expression); err != nil {
 			fmt.Printf("Filter Expression (%v) Error!\n", expression)
-			os.Exit(1)
+			return
 		}
 	}
 
@@ -61,7 +67,7 @@ func doIt(ctx context.Context, device string, promiscuous bool, expression strin
 		case <-ctx.Done():
 			// Print packets counter and exit goroutine
 			fmt.Printf("\n%v packets captured.\n", packetCount)
-			os.Exit(0)
+			return
 		}
 	}
 
@@ -82,14 +88,15 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go doIt(ctx, *device, *promiscuous, expression)
+
+	go sniff(ctx, *device, *promiscuous, expression)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Kill, os.Interrupt)
 	select {
 	case <-c:
 		cancel()
-		select {}
+		wg.Wait()
 	}
 
 }
