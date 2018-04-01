@@ -7,9 +7,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
+	"runtime/trace"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
@@ -25,12 +26,12 @@ func sniff(ctx context.Context, device string, promiscuous bool, expression stri
 	var (
 		snapshotLen int32 = 1024
 		err         error
-		timeout     time.Duration = 30 * time.Second
-		handle      *pcap.Handle
+		// timeout     time.Duration = 30 * time.Second
+		handle *pcap.Handle
 	)
 
 	// Open device
-	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
+	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -76,6 +77,31 @@ func sniff(ctx context.Context, device string, promiscuous bool, expression stri
 //main function
 func main() {
 
+	//-------------------性能测量---------------------
+	cpuFile, errCPU := os.OpenFile("cpu.pprof", os.O_CREATE|os.O_RDWR, 0644)
+	if errCPU != nil {
+		log.Fatal("cpu.pprof file create error")
+	}
+	defer cpuFile.Close()
+	pprof.StartCPUProfile(cpuFile)
+	defer pprof.StopCPUProfile()
+
+	memFile, errMEM := os.OpenFile("mem.pprof", os.O_CREATE|os.O_RDWR, 0644)
+	if errMEM != nil {
+		log.Fatal("mem.pprof file create error")
+	}
+	defer memFile.Close()
+	pprof.WriteHeapProfile(memFile)
+
+	traceFile, errTrace := os.OpenFile("trace.out", os.O_CREATE|os.O_RDWR, 0644)
+	if errTrace != nil {
+		log.Fatal("trace.out file create error")
+	}
+	defer traceFile.Close()
+	trace.Start(traceFile)
+	defer trace.Stop()
+
+	//-----------------main program--------------------
 	var expression string
 
 	device := flag.String("i", "eth0", "device name")
