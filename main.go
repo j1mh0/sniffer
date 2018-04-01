@@ -34,10 +34,10 @@ func sniff(ctx context.Context, device string, promiscuous bool, expression stri
 	// Open device
 
 	if block {
-		handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, pcap.BlockForever)
-	} else {
-		handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
+		timeout = pcap.BlockForever
 	}
+
+	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 
 	if err != nil {
 		log.Fatal(err)
