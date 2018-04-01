@@ -11,6 +11,7 @@ import (
 	"runtime/trace"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
@@ -26,12 +27,12 @@ func sniff(ctx context.Context, device string, promiscuous bool, expression stri
 	var (
 		snapshotLen int32 = 1024
 		err         error
-		// timeout     time.Duration = 30 * time.Second
-		handle *pcap.Handle
+		timeout     time.Duration = 30 * time.Second
+		handle      *pcap.Handle
 	)
 
 	// Open device
-	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, pcap.BlockForever)
+	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	if err != nil {
 		log.Fatal(err)
 		return
